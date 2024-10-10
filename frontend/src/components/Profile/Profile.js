@@ -12,6 +12,7 @@ const Profile = () => {
   });
 
   const [isEditing, setIsEditing] = useState(false);
+  const [userId, setUserId] = useState(0);
   const navigate = useNavigate();
   const isFetchCalled = useRef(false);
 
@@ -26,9 +27,8 @@ const Profile = () => {
 }, [navigate]);
 
 useEffect(() => {
-  // Add a check to ensure fetchUserData is called only once
   if (!isFetchCalled.current) {
-    isFetchCalled.current = true; // Set the flag to true
+    isFetchCalled.current = true; 
     fetchUserData();
   }
 
@@ -39,7 +39,6 @@ useEffect(() => {
     }
 
     try {
-      // First, fetch the user's email from the profile endpoint
       const profileResponse = await fetch('http://localhost:3001/api/v1/auth/profile', {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -51,10 +50,11 @@ useEffect(() => {
       }
 
       const profileData = await profileResponse.json();
-      const userEmail = profileData.email;
+      const userEmail = profileData.email;      
+      
 
-      // Then, use the email to fetch the full user data
-      const userResponse = await fetch(`http://localhost:3001/api/v1/users/${userEmail}`, {
+      
+      const userResponse = await fetch(`http://localhost:3001/api/v1/users/findByEmail/${userEmail}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -72,6 +72,7 @@ useEffect(() => {
         bio:user.bio,
         profilePicture: user.profilePicture
       });
+      setUserId(userData.id);
       console.log('User Data is : ', userData);
       
     } catch (err) {
@@ -88,10 +89,39 @@ useEffect(() => {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsEditing(false);
-    console.log('Updated user data:', user);
+    
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      console.error('No auth token found');
+      return;
+    }
+
+    const updateData = {
+      firstName: user.firstName,
+      lastName: user.lastName,
+    };
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/v1/users/updateById/${userId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(updateData)
+      });
+
+      if (response.ok) {
+        console.log('Updated successfully');
+      } else {
+        console.error('Failed to update user data');
+      }
+    } catch (error) {
+      console.error('Error updating user data:', error);
+    }
   };
 
   return (
