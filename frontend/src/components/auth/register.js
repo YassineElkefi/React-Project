@@ -75,6 +75,11 @@ function Register() {
                     <input type="password" id="password" className="form-control" onChange={(e) => setPassword(e.target.value)} 
                                             value={password}  required />
                   </div>
+                  <div className="form-outline">
+                    <label className="form-label" htmlFor="password">Confirm Password</label>
+                    <input type="password" id="password" className="form-control" onChange={(e) => setConfirmPassword(e.target.value)} 
+                                            value={password}  required />
+                  </div>
 
                   <button type="submit" className="btn btn-success btn-block mb-4">
                     Register

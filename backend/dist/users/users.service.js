@@ -16,6 +16,7 @@ exports.UsersService = void 0;
 const common_1 = require("@nestjs/common");
 const typeorm_1 = require("@nestjs/typeorm");
 const typeorm_2 = require("typeorm");
+const bcryptjs = require("bcryptjs");
 const user_entity_1 = require("./entities/user.entity");
 let UsersService = class UsersService {
     constructor(usersRepository) {
@@ -24,17 +25,33 @@ let UsersService = class UsersService {
     async create(createUserDto) {
         return await this.usersRepository.save(createUserDto);
     }
-    findAll() {
-        return `This action returns all users`;
+    async findAll() {
+        return await this.usersRepository.find();
     }
     async findOneByEmail(email) {
         return await this.usersRepository.findOneBy({ email });
     }
-    update(id, updateUserDto) {
-        return `This action updates a #${id} user`;
-    }
-    remove(id) {
-        return `This action removes a #${id} user`;
+    async update(id, updateUserDto) {
+        const { email, password } = updateUserDto;
+        const existingUser = await this.usersRepository.findOne({ where: { id } });
+        if (!existingUser) {
+            throw new common_1.NotFoundException(`User #${id} not found`);
+        }
+        if (email && email !== existingUser.email) {
+            const emailExists = await this.usersRepository.findOne({ where: { email } });
+            if (emailExists) {
+                throw new common_1.BadRequestException('Email already in use');
+            }
+        }
+        if (password) {
+            const salt = await bcryptjs.genSalt();
+            updateUserDto.password = await bcryptjs.hash(password, salt);
+        }
+        const updatedUser = await this.usersRepository.save({
+            ...existingUser,
+            ...updateUserDto,
+        });
+        return updatedUser;
     }
 };
 exports.UsersService = UsersService;
