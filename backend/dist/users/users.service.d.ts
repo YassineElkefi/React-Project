@@ -16,5 +16,10 @@ export declare class UsersService {
         id: number;
         role: string;
         deletedAt: string;
+        comments: import("../comments/entities/comment.entity").Comment[];
+        posts: import("../posts/entities/post.entity").Post[];
+        likes: import("../likes/entities/like.entity").Like[];
+        followers: User[];
+        following: User[];
     } & User>;
 }

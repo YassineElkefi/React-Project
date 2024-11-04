@@ -11,6 +11,9 @@ const common_1 = require("@nestjs/common");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const users_module_1 = require("./users/users.module");
+const posts_module_1 = require("./posts/posts.module");
+const likes_module_1 = require("./likes/likes.module");
+const comments_module_1 = require("./comments/comments.module");
 const auth_module_1 = require("./auth/auth.module");
 const config_1 = require("@nestjs/config");
 const typeorm_1 = require("@nestjs/typeorm");
@@ -32,6 +35,9 @@ exports.AppModule = AppModule = __decorate([
                 synchronize: true
             }),
             users_module_1.UsersModule,
+            likes_module_1.LikesModule,
+            posts_module_1.PostsModule,
+            comments_module_1.CommentsModule,
             auth_module_1.AuthModule
         ],
         controllers: [app_controller_1.AppController],
