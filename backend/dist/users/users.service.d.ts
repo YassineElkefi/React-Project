@@ -7,6 +7,7 @@ export declare class UsersService {
     constructor(usersRepository: Repository<User>);
     create(createUserDto: CreateUserDto): Promise<CreateUserDto & User>;
     findAll(): Promise<User[]>;
+    findOneById(id: number): Promise<User>;
     findOneByEmail(email: string): Promise<User>;
     update(id: number, updateUserDto: UpdateUserDto): Promise<{
         firstName: string;
