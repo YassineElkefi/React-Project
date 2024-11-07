@@ -28,6 +28,9 @@ let UsersService = class UsersService {
     async findAll() {
         return await this.usersRepository.find();
     }
+    async findOneById(id) {
+        return await this.usersRepository.findOneBy({ id });
+    }
     async findOneByEmail(email) {
         return await this.usersRepository.findOneBy({ email });
     }

@@ -1,9 +1,12 @@
-import { Column, DeleteDateColumn, Entity } from "typeorm";
+import { Post } from "src/posts/entities/post.entity";
+import { Comment } from "src/comments/entities/comment.entity";
+import { Like } from "src/likes/entities/like.entity";
+import { Column, DeleteDateColumn, Entity, JoinTable, ManyToMany, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
 export class User {
 
-    @Column({primary: true, generated: true})
+    @PrimaryGeneratedColumn()
     id: number;
 
     @Column({length: 20})
@@ -23,4 +26,24 @@ export class User {
 
     @DeleteDateColumn()
     deletedAt: string;
+
+    @OneToMany(() => Comment, (comment) => comment.user)
+    comments: Comment[];
+
+    @OneToMany(() => Post, (post) => post.user)
+    posts: Post[];
+
+    @OneToMany(() => Like, (like) => like.user)
+    likes: Like[];
+
+    @ManyToMany(() => User, (user) => user.following)
+    @JoinTable({
+        name: "user_followers",
+        joinColumn: { name: "userId", referencedColumnName: "id" },
+        inverseJoinColumn: { name: "followerId", referencedColumnName: "id" },
+    })
+    followers: User[];
+
+    @ManyToMany(() => User, (user) => user.followers)
+    following: User[];
 }

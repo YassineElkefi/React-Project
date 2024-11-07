@@ -7,6 +7,7 @@ export declare class UsersService {
     constructor(usersRepository: Repository<User>);
     create(createUserDto: CreateUserDto): Promise<CreateUserDto & User>;
     findAll(): Promise<User[]>;
+    findOneById(id: number): Promise<User>;
     findOneByEmail(email: string): Promise<User>;
     update(id: number, updateUserDto: UpdateUserDto): Promise<{
         firstName: string;
@@ -16,5 +17,10 @@ export declare class UsersService {
         id: number;
         role: string;
         deletedAt: string;
+        comments: import("../comments/entities/comment.entity").Comment[];
+        posts: import("../posts/entities/post.entity").Post[];
+        likes: import("../likes/entities/like.entity").Like[];
+        followers: User[];
+        following: User[];
     } & User>;
 }

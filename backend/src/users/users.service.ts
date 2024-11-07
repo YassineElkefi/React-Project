@@ -21,6 +21,10 @@ export class UsersService {
     return await this.usersRepository.find();
   }
 
+  async findOneById(id: number) {
+    return await this.usersRepository.findOneBy({ id })
+  }
+
   async findOneByEmail(email: string) {
     return await this.usersRepository.findOneBy({ email })
   }

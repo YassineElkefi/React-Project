@@ -13,5 +13,10 @@ export declare class UsersController {
         id: number;
         role: string;
         deletedAt: string;
+        comments: import("../comments/entities/comment.entity").Comment[];
+        posts: import("../posts/entities/post.entity").Post[];
+        likes: import("../likes/entities/like.entity").Like[];
+        followers: import("./entities/user.entity").User[];
+        following: import("./entities/user.entity").User[];
     } & import("./entities/user.entity").User>;
 }
