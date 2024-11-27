@@ -31,15 +31,32 @@ const Profile = () => {
     );
   };
 
-  const formatDateTime = (dateString) => {
+  const formatDateTime = (dateString, timeString) => {
+    // Parse the date part only
     const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
+  
+    if (isNaN(date.getTime())) {
+      return "Invalid Date";
+    }
+  
+    // Format the date
+    const dateOptions = {
       month: 'long',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+      year: 'numeric'
+    };
+    const formattedDate = date.toLocaleDateString('en-US', dateOptions);
+  
+    // Extract hour and minute from the time string (assuming format HH:MM:SS)
+    const [hour, minute] = timeString.split(":");
+    
+    // Determine AM/PM and format the time
+    const hour12 = (parseInt(hour) % 12) || 12;
+    const ampm = parseInt(hour) >= 12 ? "PM" : "AM";
+  
+    const formattedTime = `${hour12}:${minute} ${ampm}`;
+  
+    return `${formattedDate} at ${formattedTime}`;
   };
                   
 
@@ -113,7 +130,18 @@ useEffect(() => {
       });
       setUserId(userData.id);
       console.log('User Data is : ', userData);
-      
+      const postsResponse = await fetch(`http://localhost:3001/api/v1/posts/get-posts-user-id/${userData.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (postsResponse.ok) {
+        const postsData = await postsResponse.json();
+        setPosts(postsData);
+      } else {
+        console.error('Failed to fetch user posts');
+      } 
     } catch (err) {
       console.error('Error fetching user data:', err);
     }
@@ -162,72 +190,116 @@ useEffect(() => {
       console.error('Error updating user data:', error);
     }
   };
-
+/*
   const handleLike = (postId) => {
-    setPosts(prevPosts => 
-      prevPosts.map(post => {
+    setPosts((prevPosts) =>
+      prevPosts.map((post) => {
         if (post.id === postId) {
-          const isLiked = post.likedBy.includes(userId);
+          const isLiked = post.likes?.includes(userId); // Check if likes includes the userId
           return {
             ...post,
             likes: isLiked ? post.likes - 1 : post.likes + 1,
-            likedBy: isLiked 
-              ? post.likedBy.filter(id => id !== userId)
-              : [...post.likedBy, userId]
           };
         }
         return post;
       })
     );
   };
+  */
 
-  const handleAddComment = (postId) => {
+  const handleAddComment = async (postId) => {
     if (newComment.trim()) {
-      const comment = {
-        id: Date.now(),
-        userId: userId,
-        userName: `${user.firstName} ${user.lastName}`,
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+  
+      const commentData = {
+        postId: postId,
         content: newComment,
-        timestamp: new Date(),
-        profilePicture: user.profilePicture
+        userId: userId
       };
-
-      setPosts(prevPosts =>
-        prevPosts.map(post => {
-          if (post.id === postId) {
-            return {
-              ...post,
-              comments: [comment, ...post.comments]
-            };
-          }
-          return post;
-        })
-      );
-      setNewComment('');
+  
+      try {
+        const response = await fetch('http://localhost:3001/api/v1/comments/create', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(commentData)
+        });
+  
+        if (response.ok) {
+          const newCommentData = await response.json();
+          
+          // Ensure the comment has a properly formatted date and time
+          newCommentData.date = new Date().toISOString().slice(0, 10);
+          newCommentData.time = new Date().toISOString().slice(11, 19);
+          
+          setPosts(prevPosts =>
+            prevPosts.map(post => {
+              if (post.id === postId) {
+                return {
+                  ...post,
+                  comments: [newCommentData, ...post.comments]
+                };
+              }
+              return post;
+            })
+          );
+          setNewComment('');
+        } else {
+          console.error('Failed to create comment');
+        }
+      } catch (error) {
+        console.error('Error creating comment:', error);
+      }
     }
   };
 
   
-  const handleAddPost = (e) => {
+  const handleAddPost = async (e) => {
     e.preventDefault();
     if (newPost.trim()) {
-      const newPostData = {
-        id: posts.length + 1,
-        user: {
-          id: userId,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          profilePicture: user.profilePicture,
-        },
-        content: newPost,
-        likes: 0,
-        comments: [], 
-        likedBy: [],
-        timestamp: new Date().toISOString(),
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+  
+      const postData = {
+        description: newPost,
+        date: new Date().toISOString().slice(0, 10),
+        time: new Date().toISOString().slice(11, 19),
+        userId: userId
       };
-      setPosts([newPostData, ...posts]);
-      setNewPost('');
-      setShowEmojis(false);
+  
+      try {
+        const response = await fetch('http://localhost:3001/api/v1/posts/create-post', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(postData)
+        });
+  
+        if (response.ok) {
+          const newPostData = await response.json();
+
+          newPostData.comments = newPostData.comments || [];
+
+          setPosts([newPostData, ...posts]);
+          setNewPost('');
+          setShowEmojis(false);
+        } else {
+          console.error('Failed to create post');
+        }
+      } catch (error) {
+        console.error('Error creating post:', error);
+      }
     }
   };
   const insertEmoji = (emoji) => {
@@ -241,7 +313,6 @@ useEffect(() => {
     setNewPost(newText);
     setShowEmojis(false);
     
-    // Focus back on textarea and set cursor position after emoji
     setTimeout(() => {
       textarea.focus();
       const newCursorPos = start + emoji.length;
@@ -249,17 +320,38 @@ useEffect(() => {
     }, 0);
   };
 
-  const handleDeletePost = (postId) => {
-    setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
-  }
+  const handleDeletePost = async (postId) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      console.error('No auth token found');
+      return;
+    }
+  
+    try {
+      const response = await fetch(`http://localhost:3001/api/v1/posts/delete-post/${postId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+  
+      if (response.ok) {
+        setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+      } else {
+        console.error('Failed to delete post');
+      }
+    } catch (error) {
+      console.error('Error deleting post:', error);
+    }
+  };
   const handleSaveEdit = (postId) => {
     setPosts((prevPosts) =>
       prevPosts.map((post) =>
         post.id === postId ? { ...post, content: editedContent } : post
       )
     );
-    setEditPostId(null); // Exit edit mode
-    setEditedContent(''); // Clear the edited content
+    setEditPostId(null); 
+    setEditedContent(''); 
   };
 
   return (
@@ -409,7 +501,7 @@ useEffect(() => {
                 )}
                 <div className="flex items-start space-x-4">
                   <img
-                    src={post.user.profilePicture}
+                    src={user.profilePicture}
                     alt={post.user.firstName}
                     className="w-10 h-10 rounded-full"
                   />
@@ -419,7 +511,8 @@ useEffect(() => {
                         {post.user.firstName} {post.user.lastName}
                       </h3>
                       <span className="text-sm text-gray-500">
-                        {formatDateTime(post.timestamp)}
+                      <p>{formatDateTime(post.date, post.time)}</p>
+                      {/*formatDateTime(post.timestamp)*/}
                       </span>
                     </div>
                     {editPostId === post.id ? (
@@ -445,10 +538,20 @@ useEffect(() => {
                         </div>
                       </div>
                     ) : (
-                      <p className="mt-2 text-gray-600">{post.content}</p>
+                      <p className="mt-2 text-gray-600">{post.description}</p>
                     )}
                     {/*<p className="mt-2 text-gray-600">{post.content}</p>*/}
                     <div className="mt-4 flex items-center space-x-4">
+                    <button 
+                      className={`flex items-center space-x-2 transition-transform duration-200 hover:scale-110 text-gray-500 hover:text-red-500`}
+                    >
+                        <Heart 
+                          size={18} 
+                          //fill={post.likedBy.includes(userId) ? "currentColor" : "none"}
+                        />
+                        <span>{post.likes ? post.likes : "0"}</span>
+                      </button>
+                      {/* 
                       <button 
                         onClick={() => handleLike(post.id)}
                         className={`flex items-center space-x-2 transition-transform duration-200 hover:scale-110 
@@ -458,8 +561,10 @@ useEffect(() => {
                           size={18} 
                           fill={post.likedBy.includes(userId) ? "currentColor" : "none"}
                         />
+                        
                         <span>{post.likes}</span>
                       </button>
+                      */}
                       <button 
                         onClick={() => setActiveCommentPost(activeCommentPost === post.id ? null : post.id)}
                         className="flex items-center space-x-2 text-gray-500 hover:text-green-600 transition-transform duration-200 hover:scale-110"
