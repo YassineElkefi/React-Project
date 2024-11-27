@@ -1,7 +1,51 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { likePostDto } from 'src/likes/dto/create-like.dto';
+import { PostsService } from 'src/posts/posts.service';
+import { UsersService } from 'src/users/users.service';
+import { Repository } from 'typeorm';
+import { Like } from './entities/like.entity';
 
 
 @Injectable()
 export class LikesService {
+
+    constructor(
+        @InjectRepository(Like)
+        private readonly likeRepository: Repository<Like>,
+        private readonly userService: UsersService,
+        private readonly postService: PostsService,
+    ) {}
+
+    async post(likePostDto: likePostDto): Promise<Like> {
+        const userId = likePostDto.userId;
+        const postId = likePostDto.postId;
+        if (typeof likePostDto.date === 'string') {
+            likePostDto.date = new Date(likePostDto.date);
+        }
+        const newLike = this.likeRepository.create(likePostDto);
+        newLike.user = await  this.userService.findOneById(userId);
+        newLike.post = await  this.postService.findById(postId);
+        return await this.likeRepository.save(newLike);
+    }
+
+    async findAllByUserId(id: number): Promise<Like[]> {
+        return await this.likeRepository.find({
+            where: { user: { id: id } },
+        });
+    }
+
+    async findAllByPostId(id: number): Promise<Like[]> {
+        return await this.likeRepository.find({
+            where: { post: { id: id } },
+        });
+    }
+
+    async delete(id: number): Promise<void> {
+        const result = await this.likeRepository.delete(id);
+        if (result.affected === 0) {
+            throw new NotFoundException(`Like with ID ${id} not found`);
+        }
+    }
 
 }

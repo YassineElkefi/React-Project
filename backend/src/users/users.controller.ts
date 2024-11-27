@@ -21,4 +21,14 @@ export class UsersController {
     return this.usersService.update(+id, updateUserDto);
   }
 
+  @Post('/follow/:followerId/:followeeId')
+  follow(@Param('followerId') followerId: number, @Param('followeeId') followeeId: number) {
+    return this.usersService.followUser(followerId, followeeId);
+  }
+
+  @Post('/unfollow/:followerId/:followeeId')
+  unfollow(@Param('followerId') followerId: number, @Param('followeeId') followeeId: number) {
+    return this.usersService.unfollowUser(followerId, followeeId);
+  }
+
 }
