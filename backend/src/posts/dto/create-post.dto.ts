@@ -1,6 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsString, IsDate, IsOptional, ValidateNested, IsNumber } from 'class-validator';
-import { CreateUserDto } from 'src/users/dto/create-user.dto';
+import { IsString, IsDate, IsOptional, IsNumber } from 'class-validator';
 
 export class CreatePostDto {
 

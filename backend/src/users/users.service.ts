@@ -57,4 +57,49 @@ export class UsersService {
     return updatedUser;
   }
 
+  async followUser(followerId: number, followeeId: number) {
+    const follower = await this.usersRepository.findOne({where: { id: followerId }});
+
+    const followee = await this.usersRepository.findOne({where: { id: followeeId }});
+
+    if (!follower || !followee) {
+      throw new NotFoundException('Users not found');
+    }
+
+    if (follower.id === followee.id) {
+      throw new BadRequestException('You cant follow yourself');
+    }
+
+    if (follower.following.some(user => user.id === followee.id)) {
+      throw new BadRequestException('You already follow this person');
+    }
+
+    follower.following.push(followee);
+    followee.followers.push(follower);
+
+    await this.usersRepository.save(follower);
+    await this.usersRepository.save(followee);
+
+    return { message: 'Followed successfully' };
+  }
+
+  async unfollowUser(followerId: number, followeeId: number) {
+    
+    const follower = await this.usersRepository.findOne({where: { id: followerId }});
+
+    const followee = await this.usersRepository.findOne({where: { id: followeeId }});
+
+    if (!follower || !followee) {
+      throw new NotFoundException('Users not found');
+    }
+
+    follower.following = follower.following.filter(user => user.id !== followee.id);
+    followee.followers = followee.followers.filter(user => user.id !== follower.id);
+
+    await this.usersRepository.save(follower);
+    await this.usersRepository.save(followee);
+
+    return { message: 'Unfollowed successfully' };
+  }
+
 }
