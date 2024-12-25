@@ -1,29 +1,63 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { BiBell } from 'react-icons/bi';
 
 const Navbar = () => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem("authToken");
-    if (token){
-        setIsAuthenticated(true)
+    if (token) {
+      setIsAuthenticated(true);
+      fetchNotifications();
     }
   }, []);
+
+  const fetchNotifications = async () => {
+    try {
+      const response = await fetch('http://localhost:3001/api/v1/notifications', {
+        //credentials: 'include'
+      });
+      const data = await response.json();
+      setNotifications(data);
+      setUnreadCount(data.filter(n => !n.read).length);
+    } catch (error) {
+      console.error('Error fetching notifications:', error);
+    }
+  };
 
   const navItems = [
     { name: 'Home', path: '/' },
     { name: 'Profile', path: '/profile' },
     ...(!isAuthenticated
-        ? [
-            { name: 'Login', path: '/login' },
-            { name: 'Register', path: '/register' },
-          ]
-        : []),
+      ? [
+          { name: 'Login', path: '/login' },
+          { name: 'Register', path: '/register' },
+        ]
+      : []),
   ];
+
+  const handleNotificationClick = () => {
+    setShowNotifications(!showNotifications);
+  };
+
+  const markAsRead = async (notificationId) => {
+    try {
+      await fetch(`http://localhost:3001/api/v1/notifications/read/${notificationId}`, {
+        method: 'PATCH',
+        //credentials: 'include'
+      });
+      fetchNotifications();
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+    }
+  };
 
   const logout = () => {
     localStorage.removeItem('authToken');
@@ -32,9 +66,9 @@ const Navbar = () => {
   };
 
   return (
-    <nav className="bg-green-800 shadow-lg">
+    <nav className="bg-green-800 shadow-lg relative">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="flex justify-between">
+        <div className="flex justify-between items-center">
           <div className="flex space-x-7">
             <div>
               <Link to="/" className="flex items-center py-4 px-2">
@@ -54,6 +88,48 @@ const Navbar = () => {
                 {item.name}
               </Link>
             ))}
+            {isAuthenticated && (
+              <div className="relative">
+                <button
+                  onClick={handleNotificationClick}
+                  className="text-white hover:text-gray-300 p-2 rounded-full focus:outline-none"
+                >
+                  <BiBell className="h-6 w-6" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                      {unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {showNotifications && (
+                  <div className="absolute right-0 mt-2 w-80 bg-white rounded-md shadow-lg z-50">
+                    <div className="py-2 max-h-96 overflow-y-auto">
+                      {notifications.length > 0 ? (
+                        notifications.map((notification) => (
+                          <div
+                            key={notification.id}
+                            className={`px-4 py-3 hover:bg-gray-100 ${
+                              !notification.read ? 'bg-blue-50' : ''
+                            }`}
+                            onClick={() => markAsRead(notification.id)}
+                          >
+                            <p className="text-sm text-gray-800">{notification.content}</p>
+                            <p className="text-xs text-gray-500 mt-1">
+                              {new Date(notification.createdAt).toLocaleDateString()}
+                            </p>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="px-4 py-3 text-sm text-gray-500">
+                          No notifications
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
             {isAuthenticated && (
               <button
                 className="py-2 px-3 text-green-100 font-medium rounded-full hover:bg-green-700 transition duration-300 bg-red-800"

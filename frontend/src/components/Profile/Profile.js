@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Camera, Edit2, X, MessageSquare, Heart,Share2, Smile, Trash2, Send, Edit } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Profile = () => {
   const [user, setUser] = useState({
@@ -68,7 +68,9 @@ const Profile = () => {
   const [activeCommentPost, setActiveCommentPost] = useState(null);
   const [newComment, setNewComment] = useState('');
   const [editPostId, setEditPostId] = useState(null);
-    const [editedContent, setEditedContent] = useState('');
+  const [editedContent, setEditedContent] = useState('');
+  const [followers, setFollowers] = useState([]);
+  const [following, setFollowing] = useState([]);
   const navigate = useNavigate();
   const isFetchCalled = useRef(false);
 
@@ -138,15 +140,72 @@ useEffect(() => {
 
       if (postsResponse.ok) {
         const postsData = await postsResponse.json();
-        setPosts(postsData);
+
+        // Fetch comments for each post
+        const postsWithComments = await Promise.all(postsData.map(async (post) => {
+          // Fetch comments
+          const commentsResponse = await fetch(`http://localhost:3001/api/v1/comments/get-comments-post-id/${post.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          let comments = [];
+          if (commentsResponse.ok) {
+            comments = await commentsResponse.json();
+          }
+        
+          // Fetch likes
+          const likesResponse = await fetch(`http://localhost:3001/api/v1/likes/get-likes-post-id/${post.id}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          let likes = 0;
+          if (likesResponse.ok) {
+            const likesData = await likesResponse.json();
+            likes = likesData.length;
+          }
+        
+          return { ...post, comments, likes };
+        }));
+
+        console.log('Posts with comments:', postsWithComments);
+        
+
+        setPosts(postsWithComments);
       } else {
-        console.error('Failed to fetch user posts');
-      } 
+        console.error('Failed to fetch posts');
+      }
     } catch (err) {
       console.error('Error fetching user data:', err);
     }
   }
 }, []);
+
+useEffect(() => {
+  const fetchFollowData = async () => {
+    const token = localStorage.getItem("authToken");
+    if (!token || !userId) return;
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/v1/users/findById/${userId}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (response.ok) {
+        const userData = await response.json();
+        setFollowers(userData.followers || []);
+        setFollowing(userData.following || []);
+      }
+    } catch (error) {
+      console.error('Error fetching follow data:', error);
+    }
+  };
+
+  fetchFollowData();
+}, [userId]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -190,6 +249,59 @@ useEffect(() => {
       console.error('Error updating user data:', error);
     }
   };
+
+  const handleLikePost = async (postId) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      console.error('No auth token found');
+      return;
+    }
+  
+    const likeData = {
+      userId: userId,
+      postId: postId,
+      date: new Date().toISOString().slice(0, 10),
+      time: new Date().toLocaleTimeString('en-US', { hour12: false })
+    };
+  
+    try {
+      const response = await fetch('http://localhost:3001/api/v1/likes/like-post', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(likeData)
+      });
+  
+      if (response.ok) {
+        // Fetch updated likes for the post
+        const likesResponse = await fetch(`http://localhost:3001/api/v1/likes/get-likes-post-id/${postId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+  
+        if (likesResponse.ok) {
+          const likes = await likesResponse.json();
+          
+          // Update posts state with new likes count
+          setPosts(prevPosts => 
+            prevPosts.map(post => 
+              post.id === postId 
+                ? { ...post, likes: likes.length } 
+                : post
+            )
+          );
+        }
+      } else {
+        console.error('Failed to like post');
+      }
+    } catch (error) {
+      console.error('Error liking post:', error);
+    }
+  };
+
 /*
   const handleLike = (postId) => {
     setPosts((prevPosts) =>
@@ -216,13 +328,15 @@ useEffect(() => {
       }
   
       const commentData = {
-        postId: postId,
         content: newComment,
+        date: new Date().toISOString().slice(0, 10),
+        time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+        postId: postId,
         userId: userId
       };
   
       try {
-        const response = await fetch('http://localhost:3001/api/v1/comments/create', {
+        const response = await fetch('http://localhost:3001/api/v1/comments/post-comment', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -234,10 +348,7 @@ useEffect(() => {
         if (response.ok) {
           const newCommentData = await response.json();
           
-          // Ensure the comment has a properly formatted date and time
-          newCommentData.date = new Date().toISOString().slice(0, 10);
-          newCommentData.time = new Date().toISOString().slice(11, 19);
-          
+          // Update the posts state to include the new comment
           setPosts(prevPosts =>
             prevPosts.map(post => {
               if (post.id === postId) {
@@ -249,7 +360,10 @@ useEffect(() => {
               return post;
             })
           );
+          
+          // Reset the new comment input
           setNewComment('');
+          setActiveCommentPost(postId);
         } else {
           console.error('Failed to create comment');
         }
@@ -258,6 +372,7 @@ useEffect(() => {
       }
     }
   };
+  
 
   
   const handleAddPost = async (e) => {
@@ -344,16 +459,39 @@ useEffect(() => {
       console.error('Error deleting post:', error);
     }
   };
-  const handleSaveEdit = (postId) => {
-    setPosts((prevPosts) =>
-      prevPosts.map((post) =>
-        post.id === postId ? { ...post, content: editedContent } : post
-      )
-    );
-    setEditPostId(null); 
-    setEditedContent(''); 
+  const handleSaveEdit = async (postId) => {
+    const token = localStorage.getItem("authToken");
+    if (!token) {
+      console.error('No auth token found');
+      return;
+    }
+  
+    try {
+      const response = await fetch(`http://localhost:3001/api/v1/posts/update-post/${postId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ description: editedContent })
+      });
+  
+      if (response.ok) {
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post.id === postId ? { ...post, description: editedContent } : post
+          )
+        );
+        setEditPostId(null);
+        setEditedContent('');
+      } else {
+        console.error('Failed to update post');
+      }
+    } catch (error) {
+      console.error('Error updating post:', error);
+    }
   };
-
+  
   return (
     <div className="min-h-screen bg-green-50 px-4 sm:px-6 lg:px-8">
       <div className="w-full mx-auto pt-8 space-y-8">
@@ -363,6 +501,14 @@ useEffect(() => {
             <div className="absolute bottom-0 left-36 right-0 p-6 text-white">
               <h1 className="text-3xl font-bold">{user.firstName} {user.lastName}</h1>
               <p className="text-sm mt-1 opacity-80">{user.email}</p>
+              <div className="flex space-x-4 mt-2">
+                <div className="text-sm">
+                  <span className="font-bold">{followers.length}</span> followers
+                </div>
+                <div className="text-sm">
+                  <span className="font-bold">{following.length}</span> following
+                </div>
+              </div>
             </div>
           </div>
           <div className="relative">
@@ -445,9 +591,9 @@ useEffect(() => {
         </div>
 
         <div className="grid grid-cols-12 gap-8">
-          <div className="col-span-12 lg:col-start-4 lg:col-span-6 space-y-6">
+          <div className="col-span-12 lg:col-span-8 space-y-6">
 
-            <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
           <form onSubmit={handleAddPost} className="space-y-4">
             <div className="relative">
               <textarea
@@ -483,10 +629,10 @@ useEffect(() => {
                 {post.user.id === userId && (
                   <div className="absolute top-4 right-4 space-x-2 flex">
                     <button
-                      onClick={() =>{ setEditPostId(post.id)
-                        setEditedContent(post.content);
-                      }
-                      }
+                      onClick={() => { 
+                        setEditPostId(post.id);
+                        setEditedContent(post.description);
+                      }}
                       className="text-blue-500 hover:text-blue-700"
                     >
                       <Edit size={20} />
@@ -543,14 +689,16 @@ useEffect(() => {
                     {/*<p className="mt-2 text-gray-600">{post.content}</p>*/}
                     <div className="mt-4 flex items-center space-x-4">
                     <button 
-                      className={`flex items-center space-x-2 transition-transform duration-200 hover:scale-110 text-gray-500 hover:text-red-500`}
+                      onClick={() => handleLikePost(post.id)}
+                      className={`flex items-center space-x-2 transition-transform duration-200 hover:scale-110 
+                        ${post.likes > 0 ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
                     >
-                        <Heart 
-                          size={18} 
-                          //fill={post.likedBy.includes(userId) ? "currentColor" : "none"}
-                        />
-                        <span>{post.likes ? post.likes : "0"}</span>
-                      </button>
+                      <Heart 
+                        size={18} 
+                        fill={post.likes > 0 ? "currentColor" : "none"}
+                      />
+                      <span>{post.likes || 0}</span>
+                    </button>
                       {/* 
                       <button 
                         onClick={() => handleLike(post.id)}
@@ -599,24 +747,28 @@ useEffect(() => {
                         </div>
                       </div>
                       <div className="space-y-3 max-h-60 overflow-y-auto">
-                        {post.comments.map((comment) => (
-                          <div key={comment.id} className="flex items-start space-x-3 p-2 bg-gray-50 rounded-lg">
-                            <img
-                              src={comment.profilePicture}
-                              alt={`${comment.userName}'s avatar`}
-                              className="w-8 h-8 rounded-full"
-                            />
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-2">
-                                <span className="font-medium text-sm">{comment.userName}</span>
-                                <span className="text-xs text-gray-500">
-                                  {formatDateTime(comment.timestamp)}
-                                </span>
-                              </div>
-                              <p className="text-sm text-gray-600 mt-1">{comment.content}</p>
-                            </div>
+                      {post.comments.map((comment) => (
+                      <div key={comment.id} className="flex items-start space-x-3 p-2 bg-gray-50 rounded-lg">
+                        <img
+                          src={comment.user?.profilePicture ||
+                            'https://via.assets.so/img.jpg?w=150&h=150&tc=black&bg=#cecece'}
+                          alt={`${comment.user?.firstName} ${comment.user?.lastName}'s avatar`}
+                          className="w-8 h-8 rounded-full"
+                        />
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2">
+                            <span className="font-medium text-sm">
+                              {comment.user?.firstName} {comment.user?.lastName}
+                            </span>
+                            <span className="text-xs text-gray-500">
+                              {formatDateTime(comment.date, comment.time)}
+                            </span>
                           </div>
-                        ))}
+                          <p className="text-sm text-gray-600 mt-1">{comment.content}</p>
+                        </div>
+                      </div>
+                    ))}
+
                       </div>
                     </div>
                   )}
@@ -625,7 +777,40 @@ useEffect(() => {
               </div>
             ))}
           </div>
+          
+          {/* Followers sidebar */}
+          <div className="col-span-12 lg:col-span-4 space-y-6">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-xl font-semibold text-gray-800 mb-4">Followers</h2>
+              <div className="space-y-4">
+                {followers.length > 0 ? (
+                  followers.map((follower) => (
+                    <div key={follower.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
+                      <Link 
+                        to={`/profile/${follower.id}`} 
+                        className="flex items-center space-x-3"
+                      >
+                        <img
+                          src={follower.profilePicture || 'https://via.assets.so/img.jpg?w=150&h=150&tc=black&bg=#cecece'}
+                          alt={`${follower.firstName}'s avatar`}
+                          className="w-10 h-10 rounded-full"
+                        />
+                        <div>
+                          <h3 className="font-medium text-gray-800">
+                            {follower.firstName} {follower.lastName}
+                          </h3>
+                          <p className="text-sm text-gray-500">{follower.email}</p>
+                        </div>
+                      </Link>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-center">No followers yet</p>
+                )}
+              </div>
+            </div>
           </div>
+        </div>
           </div>
         </div>
   );

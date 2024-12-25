@@ -5,6 +5,8 @@ import Login from './components/auth/login';
 import Profile from './components/Profile/Profile';
 import Home from './components/Home/Home';
 import Navbar from './components/Navbar/Navbar';
+import OtherUserProfile from './components/otherUserProfile/otherUserProfile';
+import Notifications from './components/Notifications/Notifications';
 
 
 const NavbarWrapper = () => {
@@ -23,6 +25,8 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/home" element={<Home />} />
+        <Route path="/profile/:userId" element={<OtherUserProfile />} />
+        <Route path="/notifications" element={<Notifications />} />
       </Routes>
     </Router>
   );

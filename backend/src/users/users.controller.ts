@@ -11,6 +11,11 @@ export class UsersController {
     return this.usersService.findAll();
   }
 
+  @Get('/findById/:id')
+  findOneById(@Param('id') id: string) {
+    return this.usersService.findOneById(+id);
+  }
+
   @Get('/findByEmail/:email')
   findOne(@Param('email') email: string) {
     return this.usersService.findOneByEmail(email);
@@ -31,4 +36,10 @@ export class UsersController {
     return this.usersService.unfollowUser(followerId, followeeId);
   }
 
+    //Fetch Followed Users by user id
+
+  @Get('/followedUsers/:id')
+  followedUsers(@Param('id') id: string) {
+    return this.usersService.getFollowedUsers(+id);
+  }
 }

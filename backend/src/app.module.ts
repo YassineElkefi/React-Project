@@ -8,6 +8,7 @@ import { CommentsModule } from './comments/comments.module';
 import { AuthModule } from './auth/auth.module';
 import {ConfigModule} from '@nestjs/config'
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
   imports: [
@@ -26,7 +27,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
     LikesModule,
     PostsModule,
     CommentsModule,
-    AuthModule],
+    AuthModule,
+    NotificationModule],
   controllers: [AppController],
   providers: [AppService],
 })

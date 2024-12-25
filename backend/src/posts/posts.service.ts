@@ -55,9 +55,41 @@ export class PostsService {
     }
 
     async delete(id: number): Promise<void> {
-        const result = await this.postRepository.delete(id);
-        if (result.affected === 0) {
+        // First check if post exists
+        const post = await this.postRepository.findOne({
+            where: { id },
+            relations: ['comments', 'likes']
+        });
+
+        if (!post) {
             throw new NotFoundException(`Post with ID ${id} not found`);
         }
+
+        // Delete related comments and likes using querybuilder
+        await this.postRepository.manager.transaction(async transactionalEntityManager => {
+            // Delete comments
+            await transactionalEntityManager
+                .createQueryBuilder()
+                .delete()
+                .from('comment')
+                .where('postId = :postId', { postId: id })
+                .execute();
+
+            // Delete likes
+            await transactionalEntityManager
+                .createQueryBuilder()
+                .delete()
+                .from('like')
+                .where('postId = :postId', { postId: id })
+                .execute();
+
+            // Finally delete the post
+            await transactionalEntityManager
+                .createQueryBuilder()
+                .delete()
+                .from('post')
+                .where('id = :id', { id })
+                .execute();
+        });
     }
 }

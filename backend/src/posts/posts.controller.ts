@@ -19,6 +19,11 @@ export class PostsController {
         return this.postsService.findAll();
     }
 
+    @Get('/get-post/:id')
+    async findOne(@Param('id') id: number) {
+        return this.postsService.findById(id);
+    }
+
     @Get('/get-posts-user-id/:id')
     async findAllByUserId(@Param('id') id: number) {
         return this.postsService.findAllByUserId(id);

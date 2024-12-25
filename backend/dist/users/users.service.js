@@ -29,7 +29,10 @@ let UsersService = class UsersService {
         return await this.usersRepository.find();
     }
     async findOneById(id) {
-        return await this.usersRepository.findOneBy({ id });
+        return await this.usersRepository.findOne({
+            where: { id },
+            relations: ['followers', 'following'],
+        });
     }
     async findOneByEmail(email) {
         return await this.usersRepository.findOneBy({ email });
@@ -55,6 +58,55 @@ let UsersService = class UsersService {
             ...updateUserDto,
         });
         return updatedUser;
+    }
+    async followUser(followerId, followeeId) {
+        const follower = await this.usersRepository.findOne({ where: { id: followerId } });
+        const followee = await this.usersRepository.findOne({ where: { id: followeeId } });
+        if (!follower || !followee) {
+            throw new common_1.NotFoundException('Users not found');
+        }
+        if (follower.id === followee.id) {
+            throw new common_1.BadRequestException('You cant follow yourself');
+        }
+        if (!Array.isArray(follower.following)) {
+            follower.following = [];
+        }
+        if (!Array.isArray(followee.followers)) {
+            followee.followers = [];
+        }
+        if (follower.following.some(user => user.id === followee.id)) {
+            throw new common_1.BadRequestException('You already follow this person');
+        }
+        follower.following.push(followee);
+        followee.followers.push(follower);
+        await this.usersRepository.save(follower);
+        await this.usersRepository.save(followee);
+        return { message: 'Followed successfully' };
+    }
+    async unfollowUser(followerId, followeeId) {
+        const follower = await this.usersRepository.findOne({ where: { id: followerId }, relations: ['following'] });
+        const followee = await this.usersRepository.findOne({ where: { id: followeeId }, relations: ['followers'] });
+        if (!follower || !followee) {
+            throw new common_1.NotFoundException('Users not found');
+        }
+        if (!Array.isArray(follower.following)) {
+            follower.following = [];
+        }
+        if (!Array.isArray(followee.followers)) {
+            followee.followers = [];
+        }
+        follower.following = follower.following.filter(user => user.id !== followee.id);
+        followee.followers = followee.followers.filter(user => user.id !== follower.id);
+        await this.usersRepository.save(follower);
+        await this.usersRepository.save(followee);
+        return { message: 'Unfollowed successfully' };
+    }
+    async getFollowedUsers(id) {
+        const user = await this.usersRepository.findOne({ where: { id }, relations: ['following'] });
+        if (!user) {
+            throw new common_1.NotFoundException('User not found');
+        }
+        return user.following;
     }
 };
 exports.UsersService = UsersService;

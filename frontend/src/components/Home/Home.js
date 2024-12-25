@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react'
-import {MessageSquare, Heart,Share2, Smile, Trash2, Send, Edit } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import {MessageSquare, Heart,Share2, Smile, Trash2, Send, Edit, UserPlus, Combine } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 export default function Home() {
 
@@ -12,6 +12,10 @@ export default function Home() {
     profilePicture: 'https://via.assets.so/img.jpg?w=150&h=150&tc=black&bg=#cecece'
   });
   const [userId, setUserId] = useState(0);
+  const [suggestedUsers, setSuggestedUsers] = useState([]);
+  const [connectedUserDataId, setConnectedUserDataId] = useState(null);
+  const [followedUsers, setFollowedUsers] = useState([]);
+  const [posts, setPosts] = useState([]);
   const isFetchCalled = useRef(false);
 
   const navigate = useNavigate();
@@ -25,6 +29,109 @@ export default function Home() {
     }, [navigate]);
 
     useEffect(() => {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+      const fetchConnectedUser = async () => {
+        try {
+          const profileResponse = await fetch('http://localhost:3001/api/v1/auth/profile', {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+          if (!profileResponse.ok) {
+            throw new Error('Failed to fetch user profile');
+          }
+    
+          const profileData = await profileResponse.json();
+          const userEmail = profileData.email;
+    
+          const connectedUserResponse = await fetch(`http://localhost:3001/api/v1/users/findByEmail/${userEmail}`, {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+            },
+          });
+    
+          if (!connectedUserResponse.ok) {
+            throw new Error('Failed to fetch connected user');
+          }
+    
+          const connectedUserData = await connectedUserResponse.json();
+          setConnectedUserDataId(connectedUserData.id);
+          console.log('Connected User ID:', connectedUserData.id);
+          
+        } catch (error) {
+          console.error('Error fetching connected user profile:', error);
+        }
+      };
+    
+      fetchConnectedUser();
+    }, []);
+
+    // Fetch user data
+    useEffect(() => {
+      if(connectedUserDataId === null){
+        return;
+      }
+      const fetchProfileUser = async () =>{
+        try{
+          const response = await fetch(`http://localhost:3001/api/v1/users/findById/${connectedUserDataId}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            },
+          });
+          if (!response.ok) {
+            throw new Error('Failed to fetch user data');
+          }
+          const data = await response.json();
+          setUser({
+            firstName: data.firstName,
+            lastName: data.lastName,
+            email: data.email,
+            bio: data.bio,
+            profilePicture: data.profilePicture
+          });
+          setUserId(data.id);
+          console.log('User Data:', data);
+          
+        }catch(err){
+          console.error('Error fetching user data:', err);
+        }
+      };
+      fetchProfileUser();
+    }, [connectedUserDataId, userId]);
+
+    //Fetch followed users
+    useEffect(() => {
+      if (connectedUserDataId === null) {
+        return; // Exit the effect if connectedUserDataId is still null
+      }
+      
+      const fetchFollowedUsers = async () => {
+        try {
+          const response = await fetch(`http://localhost:3001/api/v1/users/followedUsers/${connectedUserDataId}`, {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            },
+          });
+          if (!response.ok) {
+            throw new Error('Failed to fetch followed users');
+          }
+          const data = await response.json();
+          setFollowedUsers(data);
+          console.log('Followed Users:', data);
+        } catch (err) {
+          console.error('Error fetching followed users:', err);
+        }
+      };
+      fetchFollowedUsers();
+    }, [connectedUserDataId]);
+    
+
+
+    /*useEffect(() => {
       if (!isFetchCalled.current) {
         isFetchCalled.current = true; 
         fetchUserData();
@@ -52,17 +159,19 @@ export default function Home() {
           
     
           
-          const userResponse = await fetch(`http://localhost:3001/api/v1/users/findByEmail/${userEmail}`, {
+          const connectedUserResponse = await fetch(`http://localhost:3001/api/v1/users/findByEmail/${userEmail}`, {
             headers: {
               'Authorization': `Bearer ${token}`
             }
           });
     
-          if (!userResponse.ok) {
+          if (!connectedUserResponse.ok) {
             throw new Error('Failed to fetch user data');
           }
     
-          const userData = await userResponse.json();
+          const userData = await connectedUserResponse.json();
+          setConnectedUserDataId(connectedUserResponse.id);
+          console.log('Connected User Data id is : ', connectedUserDataId);
           setUser({
             firstName: userData.firstName,
             lastName: userData.lastName,
@@ -77,107 +186,116 @@ export default function Home() {
           console.error('Error fetching user data:', err);
         }
       }
-    }, []);
+    }, []);*/
 
-    const staticPosts = [
-      {
-        id: 1,
-        user: {
-          id: 123,
-          firstName: "Med Amine",
-          lastName: "Ben Rhouma",
-          profilePicture: "https://randomuser.me/api/portraits/men/1.jpg",
-        },
-        content: "البدايات ديما صعيبة، لكن اللي يميز الناس الناجحة هو الصبر والاستمرارية. الطريق لأي هدف يكون مليان تحديات وصعوبات، واللي يخلي الفرق هو كيفاش تتعامل معاهم. مع كل مشكلة تتعرضلها، تفتح قدامك فرصة جديدة للتعلم والنمو. كل عقبة ما هي إلا درس في المرونة والثقة بالنفس. المهم مش كيف تبدا، بل كيف تواصل وتآمن بقدرتك على التحسن. اللي يخدم بعقلية: اليوم خير من البارح، وغدوة خير من اليوم، هو اللي يوصل وين يحب. نهاركم طيب",
-        timestamp: new Date(),
-        likes: 4999,
-        comments: [
-          {
-            id: 1, 
-            userId: 456, 
-            userName: "Jane Smith", 
-            content: "Well said!", 
-            timestamp: new Date(),
-            profilePicture: "https://randomuser.me/api/portraits/women/1.jpg"
+    useEffect(() => {
+      async function fetchSuggestedUsers() {
+        try {
+          const response = await fetch('http://localhost:3001/api/v1/users/findAllUsers', {
+            headers: {
+              'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            },
+          });
+          if (!response.ok) {
+            throw new Error('Failed to fetch suggested users');
           }
-        ],
-        likedBy: []
-      },
-      {
-        id: 2,
-        user: {
-          id: 456,
-          firstName: "Jane",
-          lastName: "Smith",
-          profilePicture: "https://randomuser.me/api/portraits/women/1.jpg",
-        },
-        content: "Exploring the mountains has been on my bucket list for so long!",
-        timestamp: new Date(),
-        likes: 30,
-        comments: [], // Initialize as empty array
-        likedBy: []
-      },
-      {
-        id: 3,
-        user: {
-          id: 789,
-          firstName: "Mike",
-          lastName: "Johnson",
-          profilePicture: "https://randomuser.me/api/portraits/men/2.jpg",
-        },
-        content: "Loving the new features on this platform. Great job, devs!",
-        timestamp: new Date(),
-        likes: 22,
-        comments: [], // Initialize as empty array
-        likedBy: []
-      },
-    ];
-
-    const handleLike = (postId) => {
-      setAllPosts(prevPosts => 
-        prevPosts.map(post => {
-          if (post.id === postId) {
-            const isLiked = post.likedBy.includes(userId);
-            return {
-              ...post,
-              likes: isLiked ? post.likes - 1 : post.likes + 1,
-              likedBy: isLiked 
-                ? post.likedBy.filter(id => id !== userId)
-                : [...post.likedBy, userId]
-            };
+          const data = await response.json();
+          //Remove the connected user from the list and the !followedUsers
+          if (followedUsers && data) {
+            const followedUserIds = followedUsers.map(user => user.id);
+            
+            const filteredData = data.filter((user) => user.id !== userId && !followedUserIds.includes(user.id));
+            setSuggestedUsers(filteredData);
+            console.log(filteredData);
           }
-          return post;
-        })
-      );
-    };
-
-    const handleAddComment = (postId) => {
-      if (newComment.trim()) {
-        const comment = {
-          id: Date.now(),
-          userId: userId,
-          userName: `${user.firstName} ${user.lastName}`,
-          content: newComment,
-          timestamp: new Date(),
-          profilePicture: user.profilePicture
-        };
-  
-        setAllPosts(prevPosts =>
-          prevPosts.map(post => {
-            if (post.id === postId) {
-              return {
-                ...post,
-                comments: [comment, ...post.comments]
-              };
-            }
-            return post;
-          })
-        );
-        setNewComment('');
+        } catch (err) {
+          console.error('Error fetching suggested users:', err);
+        }
       }
-    };
+  
+      fetchSuggestedUsers();
+    }, [userId, followedUsers]);
 
-    const [allPosts, setAllPosts] = useState(staticPosts);
+    useEffect(() => {
+      const fetchPosts = async () => {
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          console.error("No auth token found");
+          return;
+        }
+    
+        try {
+          // Fetch all posts
+          const response = await fetch("http://localhost:3001/api/v1/posts/get-all-posts", {
+            headers: {
+              "Authorization": `Bearer ${token}`,
+            },
+          });
+    
+          if (!response.ok) {
+            throw new Error("Failed to fetch posts");
+          }
+    
+          const data = await response.json();
+          console.log("All Posts:", data);
+    
+          // Ensure connectedUserDataId and post.user.id are valid
+          const filteredPosts = data.filter((post) => {
+            return (
+              post.user.id === connectedUserDataId ||
+              followedUsers.some(followedUser => followedUser.id === post.user.id)
+            );
+          });
+    
+          console.log("Filtered Posts:", filteredPosts);
+    
+          // Fetch comments and likes for filtered posts
+          const postsWithDetails = await Promise.all(
+            filteredPosts.map(async (post) => {
+              const commentsResponse = await fetch(
+                `http://localhost:3001/api/v1/comments/get-comments-post-id/${post.id}`,
+                {
+                  headers: {
+                    "Authorization": `Bearer ${token}`,
+                  },
+                }
+              );
+              let comments = [];
+              if (commentsResponse.ok) {
+                comments = await commentsResponse.json();
+              }
+    
+              const likesResponse = await fetch(
+                `http://localhost:3001/api/v1/likes/get-likes-post-id/${post.id}`,
+                {
+                  headers: {
+                    "Authorization": `Bearer ${token}`,
+                  },
+                }
+              );
+              let likes = 0;
+              if (likesResponse.ok) {
+                const likesData = await likesResponse.json();
+                likes = likesData.length;
+              }
+    
+              return { ...post, comments, likes };
+            })
+          );
+    
+          console.log("Posts with details:", postsWithDetails);
+    
+          setPosts(postsWithDetails);
+        } catch (err) {
+          console.error("Error fetching posts:", err);
+        }
+      };
+    
+      fetchPosts();
+    }, [connectedUserDataId, followedUsers]);
+
+    
+
     const [newPost, setNewPost] = useState('');
     const [showEmojis, setShowEmojis] = useState(false);
     const [activeCommentPost, setActiveCommentPost] = useState(null);
@@ -205,37 +323,77 @@ export default function Home() {
       );
     };
   
-    const formatDateTime = (dateString) => {
+    const formatDateTime = (dateString, timeString) => {
+      // Parse the date part only
       const date = new Date(dateString);
-      return date.toLocaleString('en-US', {
-        year: 'numeric',
+    
+      if (isNaN(date.getTime())) {
+        return "Invalid Date";
+      }
+    
+      // Format the date
+      const dateOptions = {
         month: 'long',
         day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      });
+        year: 'numeric'
+      };
+      const formattedDate = date.toLocaleDateString('en-US', dateOptions);
+    
+      // Extract hour and minute from the time string (assuming format HH:MM:SS)
+      const [hour, minute] = timeString.split(":");
+      
+      // Determine AM/PM and format the time
+      const hour12 = (parseInt(hour) % 12) || 12;
+      const ampm = parseInt(hour) >= 12 ? "PM" : "AM";
+    
+      const formattedTime = `${hour12}:${minute} ${ampm}`;
+    
+      return `${formattedDate} at ${formattedTime}`;
     };
-    const handleAddPost = (e) => {
+    
+    
+  
+    const handleAddPost = async (e) => {
       e.preventDefault();
-      if (newPost.trim()) {
-        const newPostData = {
-          id: allPosts.length + 1,
-          user: {
-            id: userId,
-            firstName: user.firstName,
-            lastName: user.lastName,
-            profilePicture: user.profilePicture,
-          },
-          content: newPost,
-          likes: 0,
-          comments: [], 
-          likedBy: [],
-          timestamp: new Date().toISOString(),
-        };
-        setAllPosts([newPostData, ...allPosts]);
-        setNewPost('');
-        setShowEmojis(false);
+    if (newPost.trim()) {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        console.error('No auth token found');
+        return;
       }
+  
+      const postData = {
+        description: newPost,
+        date: new Date().toISOString().slice(0, 10),
+        time: new Date().toISOString().slice(11, 19),
+        userId: userId
+      };
+  
+      try {
+        const response = await fetch('http://localhost:3001/api/v1/posts/create-post', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(postData)
+        });
+  
+        if (response.ok) {
+          const newPostData = await response.json();
+
+          newPostData.comments = newPostData.comments || [];
+
+          setPosts([newPostData, ...posts]);
+          setNewPost('');
+          setShowEmojis(false);
+        } else {
+          console.error('Failed to create post');
+        }
+      } catch (error) {
+        console.error('Error creating post:', error);
+      }
+    }
     };
     const insertEmoji = (emoji) => {
       const textarea = document.querySelector('textarea');
@@ -254,74 +412,244 @@ export default function Home() {
         textarea.setSelectionRange(newCursorPos, newCursorPos);
       }, 0);
     };
-  
-    const handleDeletePost = (postId) => {
-      setAllPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
-    }
-
-    const handleSaveEdit = (postId) => {
-      setAllPosts((prevPosts) =>
-        prevPosts.map((post) =>
-          post.id === postId ? { ...post, content: editedContent } : post
-        )
-      );
-      setEditPostId(null); // Exit edit mode
-      setEditedContent(''); // Clear the edited content
+    const handleDeletePost = async (postId) => {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+    
+      try {
+        const response = await fetch(`http://localhost:3001/api/v1/posts/delete-post/${postId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+    
+        if (response.ok) {
+          setPosts((prevPosts) => prevPosts.filter((post) => post.id !== postId));
+        } else {
+          console.error('Failed to delete post');
+        }
+      } catch (error) {
+        console.error('Error deleting post:', error);
+      }
     };
+    // Add notification after successful like
+    const handleLikePost = async (postId) => {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+    
+      const likeData = {
+        userId: userId,
+        postId: postId,
+        date: new Date().toISOString().slice(0, 10),
+        time: new Date().toLocaleTimeString('en-US', { hour12: false })
+      };
+    
+      try {
+        // First send the like request
+        const response = await fetch('http://localhost:3001/api/v1/likes/like-post', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify(likeData)
+        });
+    
+        if (response.ok) {
+          // Get the post details to check the post owner
+          const post = posts.find(p => p.id === postId);
+          
+          // Only send notification if the liker is not the post owner
+          if (post && post.user.id !== userId) {
+            // Fetch current user's details
+            const userResponse = await fetch(`http://localhost:3001/api/v1/users/findById/${userId}`, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            const userData = await userResponse.json();
+            
+            const notificationData = {
+              recipientId: post.user.id, // Post owner
+              senderId: userId, // Current user
+              type: 'LIKE',
+              content: `${userData.firstName} ${userData.lastName} liked your post`,
+              postId: postId
+            };
+    
+            // Send notification
+            await fetch('http://localhost:3001/api/v1/notifications', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+              },
+              body: JSON.stringify(notificationData)
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error handling like:', error);
+      }
+    };
+    
+    const handleAddComment = async (postId) => {
+      if (newComment.trim()) {
+        const token = localStorage.getItem("authToken");
+        if (!token) {
+          console.error('No auth token found');
+          return;
+        }
+    
+        const commentData = {
+          content: newComment,
+          date: new Date().toISOString().slice(0, 10),
+          time: new Date().toLocaleTimeString('en-US', { hour12: false }),
+          postId: postId,
+          userId: userId
+        };
+    
+        try {
+          // First send the comment request
+          const response = await fetch('http://localhost:3001/api/v1/comments/post-comment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify(commentData)
+          });
+    
+          if (response.ok) {
+            // Get the post details to check the post owner
+            const post = posts.find(p => p.id === postId);
+            
+            // Only send notification if the commenter is not the post owner
+            if (post && post.user.id !== userId) {
+              // Fetch current user's details
+              const userResponse = await fetch(`http://localhost:3001/api/v1/users/findById/${userId}`, {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              });
+              const userData = await userResponse.json();
 
+              const notificationData = {
+                recipientId: post.user.id, // Post owner
+                senderId: userId, // Current user
+                type: 'COMMENT',
+                content: `${userData.firstName} ${userData.lastName} commented on your post`,
+                postId: postId
+              };
+      
+              // Send notification
+              await fetch('http://localhost:3001/api/v1/notifications', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify(notificationData)
+              });
+            }
+          }
+        } catch (error) {
+          console.error('Error handling comment:', error);
+        }
+      }
+    };
+    const handleSaveEdit = async (postId) => {
+      const token = localStorage.getItem("authToken");
+      if (!token) {
+        console.error('No auth token found');
+        return;
+      }
+    
+      try {
+        const response = await fetch(`http://localhost:3001/api/v1/posts/update-post/${postId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ description: editedContent })
+        });
+    
+        if (response.ok) {
+          setPosts((prevPosts) =>
+            prevPosts.map((post) =>
+              post.id === postId ? { ...post, description: editedContent } : post
+            )
+          );
+          setEditPostId(null);
+          setEditedContent('');
+        } else {
+          console.error('Failed to update post');
+        }
+      } catch (error) {
+        console.error('Error updating post:', error);
+      }
+    };
   return (
     <div className="h-full bg-green-50 px-4 sm:px-6 lg:px-8">
   <div className="w-full mx-auto pt-8 space-y-8">
-    
-    {/* Post Creation Area */}
-    <div className="grid grid-cols-12 gap-8 mt-20">
-      <div className="col-span-12 lg:col-start-4 lg:col-span-6 space-y-6">
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <form onSubmit={handleAddPost} className="space-y-4">
-            <div className="relative">
+    {/* Main Contnet Area */}
+    <div className="grid grid-cols-12 gap-8 pb-8">
+    <div className="col-span-12 lg:col-span-9 space-y-6">
+    {/* Create Post */}
+
+    <div className="bg-white rounded-lg shadow-md p-6">
+          <div className="flex space-x-4">
+            <img
+              src={user.profilePicture}
+              className="w-12 h-12 rounded-full"
+            />
+            <div className="flex-1">
               <textarea
                 value={newPost}
                 onChange={(e) => setNewPost(e.target.value)}
                 placeholder="What's on your mind?"
-                className="w-full p-4 border border-gray-200 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent resize-none"
-                rows="3"
+                className="w-full p-2 border border-gray-200 rounded-lg resize-none"
               />
-              <div className="absolute bottom-2 left-2">
+              <div className="flex items-center space-x-4 mt-4">
                 <button
-                  type="button"
                   onClick={() => setShowEmojis(!showEmojis)}
-                  className="p-2 text-gray-500 hover:text-gray-700 rounded-full hover:bg-gray-100"
+                  className="p-2 text-gray-500 hover:text-gray-700"
                 >
                   <Smile size={20} />
                 </button>
-                {showEmojis && <EmojiPicker onSelect={insertEmoji} />}
+                <button
+                  onClick={handleAddPost}
+                  className="px-4 py-2 text-white bg-green-600 rounded-lg hover:bg-green-700"
+                >
+                  Post
+                </button>
               </div>
+              {showEmojis && <EmojiPicker onSelect={insertEmoji} />}
             </div>
-            <div className="flex justify-end">
-              <button
-                type="submit"
-                className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-              >
-                Post
-              </button>
-            </div>
-          </form>
+          </div>
         </div>
-      </div>
-    </div>
-
     {/* Post Feed */}
     <div className="grid grid-cols-12 gap-8 pb-8">
+      
+      
           <div className="col-span-12 lg:col-start-4 lg:col-span-6 space-y-6">
-            {allPosts.map((post) => (
+            {posts.map((post) => (
               <div key={post.id} className="bg-white rounded-lg shadow-md p-6 relative">
                 {post.user.id === userId && (
                   <div className="absolute top-4 right-4 space-x-2 flex">
                     <button
-                      onClick={() =>{ setEditPostId(post.id)
-                        setEditedContent(post.content);
-                      }
-                      }
+                      onClick={() => { 
+                        setEditPostId(post.id);
+                        setEditedContent(post.description);
+                      }}
                       className="text-blue-500 hover:text-blue-700"
                     >
                       <Edit size={20} />
@@ -346,7 +674,7 @@ export default function Home() {
                         {post.user.firstName} {post.user.lastName}
                       </h3>
                       <span className="text-sm text-gray-500">
-                        {formatDateTime(post.timestamp)}
+                        {formatDateTime(post.date, post.time)}
                       </span>
                     </div>
                     {editPostId === post.id ? (
@@ -372,20 +700,20 @@ export default function Home() {
                         </div>
                       </div>
                     ) : (
-                      <p className="mt-2 text-gray-600">{post.content}</p>
+                      <p className="mt-2 text-gray-600">{post.description}</p>
                     )}
                     {/*<p className="mt-2 text-gray-600">{post.content}</p>*/}
                     <div className="mt-4 flex items-center space-x-4">
-                      <button 
-                        onClick={() => handleLike(post.id)}
-                        className={`flex items-center space-x-2 transition-transform duration-200 hover:scale-110 
-                          ${post.likedBy.includes(userId) ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
-                      >
-                        <Heart 
-                          size={18} 
-                          fill={post.likedBy.includes(userId) ? "currentColor" : "none"}
-                        />
-                        <span>{post.likes}</span>
+                    <button 
+                      onClick={() => handleLikePost(post.id)}
+                      className={`flex items-center space-x-2 transition-transform duration-200 hover:scale-110 
+                        ${post.likes > 0 ? 'text-red-500' : 'text-gray-500 hover:text-red-500'}`}
+                    >
+                      <Heart 
+                        size={18} 
+                        fill={post.likes > 0 ? "currentColor" : "none"}
+                      />
+                      <span>{post.likes || 0}</span>
                       </button>
                       <button 
                         onClick={() => setActiveCommentPost(activeCommentPost === post.id ? null : post.id)}
@@ -424,15 +752,15 @@ export default function Home() {
                         {post.comments.map((comment) => (
                           <div key={comment.id} className="flex items-start space-x-3 p-2 bg-gray-50 rounded-lg">
                             <img
-                              src={comment.profilePicture}
-                              alt={`${comment.userName}'s avatar`}
+                              src={comment?.profilePicture || 'https://via.placeholder.com/50'}
+                              alt={`${comment.user.firstName}'s avatar`}
                               className="w-8 h-8 rounded-full"
                             />
                             <div className="flex-1">
                               <div className="flex items-center space-x-2">
-                                <span className="font-medium text-sm">{comment.userName}</span>
+                                <span className="font-medium text-sm">{comment.user.firstName} {comment.user.lastName}</span>
                                 <span className="text-xs text-gray-500">
-                                  {formatDateTime(comment.timestamp)}
+                                  {formatDateTime(comment.date, comment.time)}
                                 </span>
                               </div>
                               <p className="text-sm text-gray-600 mt-1">{comment.content}</p>
@@ -446,6 +774,44 @@ export default function Home() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      </div>
+      {/* Peple you might know */}
+      <div className="col-span-12 lg:col-span-3 space-y-6 mt-20 ">
+            <div className="bg-white rounded-lg shadow-md p-6">
+              <h2 className="text-lg font-semibold text-gray-800 mb-4">People You Might Know</h2>
+              {suggestedUsers.length > 0 ? (
+                suggestedUsers.map((user) => (
+                  <div key={user.id} className="flex items-center justify-between mb-4 hover:bg-slate-200">
+                    <Link to={`/profile/${user.id}`}>
+                    <div className="flex items-center space-x-3">
+                      <img
+                        src={user.profilePicture || 'https://via.placeholder.com/50'}
+                        alt={`${user.firstName} ${user.lastName}`}
+                        className="w-10 h-10 rounded-full"
+                      />
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-800">
+                          {user.firstName} {user.lastName}
+                        </h3>
+                        <p className="text-xs text-gray-500">{user.bio}</p>
+                      </div>
+                    </div>
+                    </Link>
+                    {/*
+                    <button
+                      className="p-2 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
+                      onClick={() => console.log(`Followed ${user.firstName}`)}
+                    >
+                      <UserPlus size={16} />
+                    </button> */}
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 text-sm">No suggestions available at the moment.</p>
+              )}
+            </div>
           </div>
         </div>
   </div>

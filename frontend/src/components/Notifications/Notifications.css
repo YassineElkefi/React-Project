@@ -1,0 +1,33 @@
+.notifications-container {
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 20px;
+}
+
+.notification {
+  padding: 15px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  border: 1px solid #ddd;
+}
+
+.notification.unread {
+  background-color: #f0f7ff;
+}
+
+.notification.read {
+  background-color: #ffffff;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.notification-actions button {
+  padding: 5px 10px;
+  border-radius: 3px;
+  border: none;
+  cursor: pointer;
+}

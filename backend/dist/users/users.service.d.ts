@@ -23,4 +23,11 @@ export declare class UsersService {
         followers: User[];
         following: User[];
     } & User>;
+    followUser(followerId: number, followeeId: number): Promise<{
+        message: string;
+    }>;
+    unfollowUser(followerId: number, followeeId: number): Promise<{
+        message: string;
+    }>;
+    getFollowedUsers(id: number): Promise<User[]>;
 }

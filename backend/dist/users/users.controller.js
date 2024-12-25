@@ -23,11 +23,23 @@ let UsersController = class UsersController {
     findAll() {
         return this.usersService.findAll();
     }
+    findOneById(id) {
+        return this.usersService.findOneById(+id);
+    }
     findOne(email) {
         return this.usersService.findOneByEmail(email);
     }
     update(id, updateUserDto) {
         return this.usersService.update(+id, updateUserDto);
+    }
+    follow(followerId, followeeId) {
+        return this.usersService.followUser(followerId, followeeId);
+    }
+    unfollow(followerId, followeeId) {
+        return this.usersService.unfollowUser(followerId, followeeId);
+    }
+    followedUsers(id) {
+        return this.usersService.getFollowedUsers(+id);
     }
 };
 exports.UsersController = UsersController;
@@ -37,6 +49,13 @@ __decorate([
     __metadata("design:paramtypes", []),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "findAll", null);
+__decorate([
+    (0, common_1.Get)('/findById/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "findOneById", null);
 __decorate([
     (0, common_1.Get)('/findByEmail/:email'),
     __param(0, (0, common_1.Param)('email')),
@@ -52,6 +71,29 @@ __decorate([
     __metadata("design:paramtypes", [String, update_user_dto_1.UpdateUserDto]),
     __metadata("design:returntype", void 0)
 ], UsersController.prototype, "update", null);
+__decorate([
+    (0, common_1.Post)('/follow/:followerId/:followeeId'),
+    __param(0, (0, common_1.Param)('followerId')),
+    __param(1, (0, common_1.Param)('followeeId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "follow", null);
+__decorate([
+    (0, common_1.Post)('/unfollow/:followerId/:followeeId'),
+    __param(0, (0, common_1.Param)('followerId')),
+    __param(1, (0, common_1.Param)('followeeId')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Number, Number]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "unfollow", null);
+__decorate([
+    (0, common_1.Get)('/followedUsers/:id'),
+    __param(0, (0, common_1.Param)('id')),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [String]),
+    __metadata("design:returntype", void 0)
+], UsersController.prototype, "followedUsers", null);
 exports.UsersController = UsersController = __decorate([
     (0, common_1.Controller)('users'),
     __metadata("design:paramtypes", [users_service_1.UsersService])

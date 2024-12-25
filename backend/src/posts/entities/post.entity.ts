@@ -21,10 +21,16 @@ export class Post {
     @Column({ type: "text", nullable: true })
     image: string;
 
-    @OneToMany(() => Comment, (comment) => comment.post)
+    @OneToMany(() => Comment, (comment) => comment.post, {
+        cascade: true,
+        onDelete: 'CASCADE' 
+    })
     comments: Comment[];
 
-    @OneToMany(() => Like, (like) => like.post)
+    @OneToMany(() => Like, (like) => like.post, {
+        cascade: true,
+        onDelete: 'CASCADE'
+    })
     likes: Like[];
 
     @ManyToOne(() => User, (user) => user.posts)

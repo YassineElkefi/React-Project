@@ -4,6 +4,7 @@ export declare class UsersController {
     private readonly usersService;
     constructor(usersService: UsersService);
     findAll(): Promise<import("./entities/user.entity").User[]>;
+    findOneById(id: string): Promise<import("./entities/user.entity").User>;
     findOne(email: string): Promise<import("./entities/user.entity").User>;
     update(id: string, updateUserDto: UpdateUserDto): Promise<{
         firstName: string;
@@ -19,4 +20,11 @@ export declare class UsersController {
         followers: import("./entities/user.entity").User[];
         following: import("./entities/user.entity").User[];
     } & import("./entities/user.entity").User>;
+    follow(followerId: number, followeeId: number): Promise<{
+        message: string;
+    }>;
+    unfollow(followerId: number, followeeId: number): Promise<{
+        message: string;
+    }>;
+    followedUsers(id: string): Promise<import("./entities/user.entity").User[]>;
 }
